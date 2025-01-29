@@ -38,7 +38,7 @@ export class ClapsService {
 
     await this.entityManager.flush();
 
-    await this.eventEmitter.emitAsync('clap.created', {
+    this.eventEmitter.emit('clap.created', {
       clapId: clap.id,
     } as ClapCreatedEvent);
 
@@ -58,7 +58,7 @@ export class ClapsService {
 
     await this.entityManager.flush();
 
-    await this.eventEmitter.emitAsync('clap.updated', {
+    this.eventEmitter.emit('clap.updated', {
       clapId: clap.id,
     } as ClapUpdatedEvent);
   }
@@ -79,7 +79,7 @@ export class ClapsService {
     this.entityManager.remove(clap);
     await this.entityManager.flush();
 
-    await this.eventEmitter.emitAsync('clap.deleted', {
+    this.eventEmitter.emit('clap.deleted', {
       articleId,
     } as ClapDeletedEvent);
   }

@@ -31,7 +31,7 @@ export class UserService {
     });
 
     await this.entityManager.flush();
-    await this.eventEmitter.emitAsync('user.created', {
+    this.eventEmitter.emit('user.created', {
       userId: user.id,
     } as UserCreatedEvent);
 
@@ -52,7 +52,7 @@ export class UserService {
 
     await this.entityManager.flush();
 
-    await this.eventEmitter.emitAsync('user.updated', {
+    this.eventEmitter.emit('user.updated', {
       userId: user.id,
     } as UserCreatedEvent);
   }

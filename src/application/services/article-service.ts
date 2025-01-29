@@ -41,7 +41,7 @@ export class ArticleService {
 
     await this.entityManager.flush();
 
-    await this.eventEmitter.emitAsync('article.created', {
+    this.eventEmitter.emit('article.created', {
       articleId: article.id,
     } as ArticleCreatedEvent);
 
@@ -62,7 +62,7 @@ export class ArticleService {
 
     await this.entityManager.flush();
 
-    await this.eventEmitter.emitAsync('article.updated', {
+    this.eventEmitter.emit('article.updated', {
       articleId: article.id,
     } as ArticleUpdatedEvent);
   }
@@ -77,7 +77,7 @@ export class ArticleService {
     this.entityManager.remove(article);
     await this.entityManager.flush();
 
-    await this.eventEmitter.emitAsync('article.deleted', {
+    this.eventEmitter.emit('article.deleted', {
       userId,
     } as ArticleDeletedEvent);
   }
