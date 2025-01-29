@@ -4,7 +4,12 @@ import { uuidv7 } from 'uuidv7';
 
 import { EntityManager } from '@mikro-orm/sqlite';
 import { Clap } from '../../domain/entity/clap';
-import { UserProfileProjector } from './user-profile-projector.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  ClapCreatedEvent,
+  ClapDeletedEvent,
+  ClapUpdatedEvent,
+} from '../../domain/events/clap-events';
 
 const createClapsSchema = z.object({
   articleId: z.string(),
@@ -19,7 +24,7 @@ const updateClapsSchema = z.object({
 export class ClapsService {
   constructor(
     private readonly entityManager: EntityManager,
-    private readonly projector: UserProfileProjector,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async createClap(body: z.infer<typeof createClapsSchema>) {
@@ -32,7 +37,10 @@ export class ClapsService {
     });
 
     await this.entityManager.flush();
-    await this.projector.synchronize(await this.userIdFromClap(clap));
+
+    await this.eventEmitter.emitAsync('clap.created', {
+      clapId: clap.id,
+    } as ClapCreatedEvent);
 
     return {
       id: clap.id,
@@ -50,27 +58,29 @@ export class ClapsService {
 
     await this.entityManager.flush();
 
-    await this.projector.synchronize(await this.userIdFromClap(clap));
+    await this.eventEmitter.emitAsync('clap.updated', {
+      clapId: clap.id,
+    } as ClapUpdatedEvent);
   }
 
   async deleteClap(id: string) {
-    const clap = await this.entityManager.findOneOrFail(Clap, {
-      id,
-    });
+    const clap = await this.entityManager.findOneOrFail(
+      Clap,
+      {
+        id,
+      },
+      {
+        populate: ['article'],
+      },
+    );
 
-    const userId = await this.userIdFromClap(clap);
+    const articleId = clap.article.id;
 
     this.entityManager.remove(clap);
     await this.entityManager.flush();
 
-    await this.projector.synchronize(userId);
-  }
-
-  private async userIdFromClap(clap: Clap) {
-    const article = await clap.article.load({
-      populate: ['user'],
-    });
-
-    return article.user.id;
+    await this.eventEmitter.emitAsync('clap.deleted', {
+      articleId,
+    } as ClapDeletedEvent);
   }
 }

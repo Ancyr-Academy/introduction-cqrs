@@ -17,7 +17,6 @@ export class Article {
   @ManyToOne({
     entity: () => User,
     ref: true,
-    lazy: true,
     deleteRule: 'cascade',
     inversedBy: 'articles',
   })

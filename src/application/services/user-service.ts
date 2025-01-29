@@ -4,7 +4,9 @@ import { uuidv7 } from 'uuidv7';
 import { EntityManager } from '@mikro-orm/sqlite';
 import { User } from '../../domain/entity/user';
 import { UserViewModel } from '../view-models/user-view-model';
-import { UserProfileProjector } from './user-profile-projector.service';
+import { UserProfileProjector } from './user-profile-projector';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { UserCreatedEvent } from '../../domain/events/user-events';
 
 const userSchema = z.object({
   firstName: z.string(),
@@ -15,6 +17,7 @@ const userSchema = z.object({
 export class UserService {
   constructor(
     private readonly entityManager: EntityManager,
+    private readonly eventEmitter: EventEmitter2,
     private readonly projector: UserProfileProjector,
   ) {}
 
@@ -28,6 +31,9 @@ export class UserService {
     });
 
     await this.entityManager.flush();
+    await this.eventEmitter.emitAsync('user.created', {
+      userId: user.id,
+    } as UserCreatedEvent);
 
     return {
       id: user.id,
@@ -45,7 +51,10 @@ export class UserService {
     user.lastName = data.lastName;
 
     await this.entityManager.flush();
-    await this.projector.synchronize(user.id);
+
+    await this.eventEmitter.emitAsync('user.updated', {
+      userId: user.id,
+    } as UserCreatedEvent);
   }
 
   async getUser(id: string): Promise<UserViewModel> {

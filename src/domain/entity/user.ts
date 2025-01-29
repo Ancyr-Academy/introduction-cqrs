@@ -18,7 +18,6 @@ export class User {
   @OneToMany({
     entity: () => Article,
     mappedBy: 'user',
-    lazy: true,
   })
   public articles = new Collection<Article>(this);
 }

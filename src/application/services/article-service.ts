@@ -4,7 +4,12 @@ import { uuidv7 } from 'uuidv7';
 
 import { EntityManager } from '@mikro-orm/sqlite';
 import { Article } from '../../domain/entity/article';
-import { UserProfileProjector } from './user-profile-projector.service';
+import {
+  ArticleCreatedEvent,
+  ArticleDeletedEvent,
+  ArticleUpdatedEvent,
+} from '../../domain/events/article-events';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 const createPostSchema = z.object({
   userId: z.string(),
@@ -21,7 +26,7 @@ const updatePostSchema = z.object({
 export class ArticleService {
   constructor(
     private readonly entityManager: EntityManager,
-    private readonly projector: UserProfileProjector,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async createArticle(body: z.infer<typeof createPostSchema>) {
@@ -35,7 +40,10 @@ export class ArticleService {
     });
 
     await this.entityManager.flush();
-    await this.projector.synchronize(body.userId);
+
+    await this.eventEmitter.emitAsync('article.created', {
+      articleId: article.id,
+    } as ArticleCreatedEvent);
 
     return {
       id: article.id,
@@ -53,7 +61,10 @@ export class ArticleService {
     article.content = data.content;
 
     await this.entityManager.flush();
-    await this.projector.synchronize(article.user.id);
+
+    await this.eventEmitter.emitAsync('article.updated', {
+      articleId: article.id,
+    } as ArticleUpdatedEvent);
   }
 
   async deleteArticle(id: string) {
@@ -61,9 +72,13 @@ export class ArticleService {
       id,
     });
 
+    const userId = article.user.id;
+
     this.entityManager.remove(article);
     await this.entityManager.flush();
 
-    await this.projector.synchronize(article.user.id);
+    await this.eventEmitter.emitAsync('article.deleted', {
+      userId,
+    } as ArticleDeletedEvent);
   }
 }
