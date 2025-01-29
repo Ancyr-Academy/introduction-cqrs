@@ -11,6 +11,7 @@ export class Clap {
     ref: true,
     deleteRule: 'cascade',
     inversedBy: 'claps',
+    lazy: true,
   })
   public article: Ref<Article>;
 

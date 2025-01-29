@@ -3,8 +3,7 @@ import { z } from 'zod';
 import { uuidv7 } from 'uuidv7';
 import { EntityManager } from '@mikro-orm/sqlite';
 import { User } from '../../domain/user';
-import { Article } from '../../domain/article';
-import { Clap } from '../../domain/clap';
+import { UserViewModel } from '../view-models/user-view-model';
 
 const userSchema = z.object({
   firstName: z.string(),
@@ -44,25 +43,27 @@ export class UserService {
     await this.entityManager.flush();
   }
 
-  async getUser(id: string) {
-    const user = await this.entityManager.findOneOrFail(User, {
-      id,
-    });
-
-    user.arrayArticles = await this.entityManager.find(
-      Article,
+  async getUser(id: string): Promise<UserViewModel> {
+    const user = await this.entityManager.findOneOrFail(
+      User,
       {
-        user,
+        id,
       },
       {
-        populate: ['claps'],
+        populate: ['articles', 'articles.claps'],
       },
     );
 
-    user.arrayArticles.forEach((article) => {
-      article.arrayClaps = article.claps.toArray() as unknown as Clap[];
-    });
-
-    return user;
+    return {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      articles: user.articles.map((article) => ({
+        id: article.id,
+        title: article.title,
+        content: article.content,
+        clapsCount: article.claps.length,
+      })),
+    };
   }
 }
