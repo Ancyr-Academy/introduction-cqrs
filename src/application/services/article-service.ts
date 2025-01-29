@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { uuidv7 } from 'uuidv7';
 
 import { EntityManager } from '@mikro-orm/sqlite';
-import { Article } from '../../domain/article';
+import { Article } from '../../domain/entity/article';
+import { UserProfileProjector } from './user-profile-projector.service';
 
 const createPostSchema = z.object({
   userId: z.string(),
@@ -18,7 +19,10 @@ const updatePostSchema = z.object({
 
 @Injectable()
 export class ArticleService {
-  constructor(private readonly entityManager: EntityManager) {}
+  constructor(
+    private readonly entityManager: EntityManager,
+    private readonly projector: UserProfileProjector,
+  ) {}
 
   async createArticle(body: z.infer<typeof createPostSchema>) {
     const data = createPostSchema.parse(body);
@@ -31,6 +35,7 @@ export class ArticleService {
     });
 
     await this.entityManager.flush();
+    await this.projector.synchronize(body.userId);
 
     return {
       id: article.id,
@@ -48,6 +53,7 @@ export class ArticleService {
     article.content = data.content;
 
     await this.entityManager.flush();
+    await this.projector.synchronize(article.user.id);
   }
 
   async deleteArticle(id: string) {
@@ -57,5 +63,7 @@ export class ArticleService {
 
     this.entityManager.remove(article);
     await this.entityManager.flush();
+
+    await this.projector.synchronize(article.user.id);
   }
 }

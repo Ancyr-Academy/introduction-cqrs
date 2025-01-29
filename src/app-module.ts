@@ -11,6 +11,7 @@ import { ArticleController } from './application/controllers/article-controller'
 import { ClapsController } from './application/controllers/claps-controller';
 import { ClapsService } from './application/services/claps-service';
 import { ArticleService } from './application/services/article-service';
+import { UserProfileProjector } from './application/services/user-profile-projector.service';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { ArticleService } from './application/services/article-service';
     ClapsController,
   ],
   providers: [
+    UserProfileProjector,
     UserService,
     ArticleService,
     ClapsService,

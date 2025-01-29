@@ -2,8 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { uuidv7 } from 'uuidv7';
 import { EntityManager } from '@mikro-orm/sqlite';
-import { User } from '../../domain/user';
+import { User } from '../../domain/entity/user';
 import { UserViewModel } from '../view-models/user-view-model';
+import { UserProfileProjector } from './user-profile-projector.service';
 
 const userSchema = z.object({
   firstName: z.string(),
@@ -12,7 +13,10 @@ const userSchema = z.object({
 
 @Injectable()
 export class UserService {
-  constructor(private readonly entityManager: EntityManager) {}
+  constructor(
+    private readonly entityManager: EntityManager,
+    private readonly projector: UserProfileProjector,
+  ) {}
 
   async createUser(body: z.infer<typeof userSchema>) {
     const data = userSchema.parse(body);
@@ -41,50 +45,10 @@ export class UserService {
     user.lastName = data.lastName;
 
     await this.entityManager.flush();
+    await this.projector.synchronize(user.id);
   }
 
   async getUser(id: string): Promise<UserViewModel> {
-    const result: Array<{
-      userId: string;
-      userFirstName: string;
-      userLastName: string;
-      articleId: string;
-      articleTitle: string;
-      articleContent: string;
-      totalClaps: number;
-    }> = await this.entityManager.execute(
-      `
-      SELECT 
-          u.id as userId, 
-          u.first_name as userFirstName, 
-          u.last_name as userLastName,
-          a.id as articleId,
-          a.title as articleTitle,
-          a.content as articleContent,
-          COALESCE(SUM(c.count), 0) AS totalClaps
-      FROM "user" AS u
-      LEFT JOIN article AS a 
-      ON a.user_id = u.id
-      LEFT JOIN clap AS c
-      ON c.article_id = a.id
-      WHERE u.id = ?
-      GROUP BY
-          a.id, a.title, a.content;
-    `,
-      [id],
-    );
-
-    const user = result[0];
-    return {
-      id: user.userId,
-      firstName: user.userFirstName,
-      lastName: user.userLastName,
-      articles: result.map((result) => ({
-        id: result.articleId,
-        title: result.articleTitle,
-        content: result.articleContent,
-        clapsCount: result.totalClaps,
-      })),
-    };
+    return this.projector.getProjection(id);
   }
 }

@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { uuidv7 } from 'uuidv7';
 
 import { EntityManager } from '@mikro-orm/sqlite';
-import { Clap } from '../../domain/clap';
+import { Clap } from '../../domain/entity/clap';
+import { UserProfileProjector } from './user-profile-projector.service';
 
 const createClapsSchema = z.object({
   articleId: z.string(),
@@ -16,7 +17,10 @@ const updateClapsSchema = z.object({
 
 @Injectable()
 export class ClapsService {
-  constructor(private readonly entityManager: EntityManager) {}
+  constructor(
+    private readonly entityManager: EntityManager,
+    private readonly projector: UserProfileProjector,
+  ) {}
 
   async createClap(body: z.infer<typeof createClapsSchema>) {
     const data = createClapsSchema.parse(body);
@@ -28,6 +32,7 @@ export class ClapsService {
     });
 
     await this.entityManager.flush();
+    await this.projector.synchronize(await this.userIdFromClap(clap));
 
     return {
       id: clap.id,
@@ -44,6 +49,8 @@ export class ClapsService {
     clap.count = body.count;
 
     await this.entityManager.flush();
+
+    await this.projector.synchronize(await this.userIdFromClap(clap));
   }
 
   async deleteClap(id: string) {
@@ -51,7 +58,19 @@ export class ClapsService {
       id,
     });
 
+    const userId = await this.userIdFromClap(clap);
+
     this.entityManager.remove(clap);
     await this.entityManager.flush();
+
+    await this.projector.synchronize(userId);
+  }
+
+  private async userIdFromClap(clap: Clap) {
+    const article = await clap.article.load({
+      populate: ['user'],
+    });
+
+    return article.user.id;
   }
 }

@@ -1,9 +1,9 @@
 import { EntityManager, ref } from '@mikro-orm/core';
 import { Seeder } from '@mikro-orm/seeder';
-import { User } from '../src/domain/user';
+import { User } from '../src/domain/entity/user';
 import { uuidv7 } from 'uuidv7';
-import { Article } from '../src/domain/article';
-import { Clap } from '../src/domain/clap';
+import { Article } from '../src/domain/entity/article';
+import { Clap } from '../src/domain/entity/clap';
 
 export class DatabaseSeeder extends Seeder {
   async run(em: EntityManager): Promise<void> {
