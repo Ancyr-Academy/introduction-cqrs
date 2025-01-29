@@ -13,6 +13,7 @@ import { ClapsService } from './application/services/claps-service';
 import { ArticleService } from './application/services/article-service';
 import { UserProfileProjector } from './application/services/user-profile-projector';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { RedisService } from './infrastructure/redis-service';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     UserService,
     ArticleService,
     ClapsService,
+    RedisService,
     {
       provide: APP_INTERCEPTOR,
       useClass: ClassSerializerInterceptor,

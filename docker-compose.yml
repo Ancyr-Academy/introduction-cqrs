@@ -1,0 +1,11 @@
+version: '3'
+services:
+  redis:
+    image: redis/redis-stack
+    restart: always
+    environment:
+      REDIS_ARGS: "--requirepass azerty123 --user user on >azerty123 ~* allcommands --user default off nopass nocommands"
+    ports:
+      - "11011:8001"
+      - "11012:6379"
+

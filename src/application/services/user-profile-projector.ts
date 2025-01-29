@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from '@mikro-orm/sqlite';
 import { UserViewModel } from '../view-models/user-view-model';
-import { UserProfileView } from '../../domain/views/user-profile-view';
 import { OnEvent } from '@nestjs/event-emitter';
 import {
   ClapCreatedEvent,
@@ -19,25 +18,24 @@ import {
   UserCreatedEvent,
   UserUpdatedEvent,
 } from '../../domain/events/user-events';
+import { RedisService } from '../../infrastructure/redis-service';
 
 @Injectable()
 export class UserProfileProjector {
-  constructor(private readonly entityManager: EntityManager) {}
+  constructor(
+    private readonly entityManager: EntityManager,
+    private readonly redis: RedisService,
+  ) {}
 
   async getProjection(userId: string): Promise<UserViewModel> {
-    let entry = await this.entityManager.findOne(UserProfileView, {
-      id: userId,
-    });
+    let entry = await this.redis.getJson<UserViewModel>(`user.${userId}`);
 
     if (!entry) {
       await this.synchronize(userId);
-
-      entry = await this.entityManager.findOneOrFail(UserProfileView, {
-        id: userId,
-      });
+      entry = await this.redis.getJson<UserViewModel>(`user.${userId}`);
     }
 
-    return entry.content;
+    return entry;
   }
 
   async synchronize(userId: string) {
@@ -84,12 +82,7 @@ export class UserProfileProjector {
       })),
     };
 
-    await this.entityManager.upsert(UserProfileView, {
-      id: user.userId,
-      content: viewModel,
-    });
-
-    await this.entityManager.flush();
+    await this.redis.setJson(`user.${userId}`, viewModel);
   }
 
   @OnEvent('user.created', { async: true })
