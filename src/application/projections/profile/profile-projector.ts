@@ -11,10 +11,7 @@ import {
   ArticleDeletedEvent,
   ArticleUpdatedEvent,
 } from '../../../domain/events/article-events';
-import {
-  UserCreatedEvent,
-  UserUpdatedEvent,
-} from '../../../domain/events/user-events';
+import { UserUpdatedEvent } from '../../../domain/events/user-events';
 import { RedisService } from '../../../infrastructure/redis-service';
 
 @Injectable()
@@ -86,6 +83,7 @@ export class ProfileProjector {
     userId: string,
     apply: (viewModel: UserViewModel) => void,
   ) {
+    // TODO : actually make performant atomic JSON.SET calls
     const viewModel = await this.redis.getJson<UserViewModel>(`user.${userId}`);
     if (!viewModel) {
       await this.synchronize(userId);
@@ -94,10 +92,6 @@ export class ProfileProjector {
     apply(viewModel);
 
     await this.redis.setJson(`user.${userId}`, viewModel);
-  }
-
-  async onUserCreated(event: UserCreatedEvent) {
-    return this.synchronize(event.userId);
   }
 
   async onUserUpdated(event: UserUpdatedEvent) {
