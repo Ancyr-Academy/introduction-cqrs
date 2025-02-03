@@ -1,7 +1,6 @@
 import { CommandHandler, ICommand, ICommandHandler } from '@nestjs/cqrs';
 import { z } from 'zod';
 import { EntityManager } from '@mikro-orm/sqlite';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { uuidv7 } from 'uuidv7';
 import { User } from '../../domain/entity/user';
 import { UserCreatedEvent } from '../../domain/events/user-events';
@@ -17,10 +16,7 @@ export class CreateUserCommand implements ICommand {
 
 @CommandHandler(CreateUserCommand)
 export class CreateUserHandler implements ICommandHandler<CreateUserCommand> {
-  constructor(
-    private readonly entityManager: EntityManager,
-    private readonly eventEmitter: EventEmitter2,
-  ) {}
+  constructor(private readonly entityManager: EntityManager) {}
 
   async execute(command: CreateUserCommand) {
     const data = schema.parse(command.props);
@@ -31,9 +27,9 @@ export class CreateUserHandler implements ICommandHandler<CreateUserCommand> {
       lastName: data.lastName,
     });
 
-    this.eventEmitter.emit('user.created', {
+    user.addEvent<UserCreatedEvent>('user.created', {
       userId: user.id,
-    } as UserCreatedEvent);
+    });
 
     return {
       id: user.id,

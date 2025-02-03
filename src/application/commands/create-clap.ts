@@ -1,7 +1,6 @@
 import { CommandHandler, ICommand, ICommandHandler } from '@nestjs/cqrs';
 import { z } from 'zod';
 import { EntityManager } from '@mikro-orm/sqlite';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Article } from '../../domain/entity/article';
 import { uuidv7 } from 'uuidv7';
 import { Clap } from '../../domain/entity/clap';
@@ -18,10 +17,7 @@ export class CreateClapCommand implements ICommand {
 
 @CommandHandler(CreateClapCommand)
 export class CreateClapHandler implements ICommandHandler<CreateClapCommand> {
-  constructor(
-    private readonly entityManager: EntityManager,
-    private readonly eventEmitter: EventEmitter2,
-  ) {}
+  constructor(private readonly entityManager: EntityManager) {}
 
   async execute(command: CreateClapCommand) {
     const data = schema.parse(command.props);
@@ -36,12 +32,12 @@ export class CreateClapHandler implements ICommandHandler<CreateClapCommand> {
       count: data.count,
     });
 
-    this.eventEmitter.emit('clap.created', {
+    clap.addEvent<ClapCreatedEvent>('clap.created', {
       clapId: clap.id,
       articleId: article.id,
       articleUserId: article.user.id,
       clapsCount: clap.count,
-    } as ClapCreatedEvent);
+    });
 
     return {
       id: clap.id,

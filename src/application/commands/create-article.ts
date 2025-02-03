@@ -1,7 +1,6 @@
 import { CommandHandler, ICommand, ICommandHandler } from '@nestjs/cqrs';
 import { z } from 'zod';
 import { EntityManager } from '@mikro-orm/sqlite';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Article } from '../../domain/entity/article';
 import { uuidv7 } from 'uuidv7';
 import { ArticleCreatedEvent } from '../../domain/events/article-events';
@@ -20,10 +19,7 @@ export class CreateArticleCommand implements ICommand {
 export class CreateArticleHandler
   implements ICommandHandler<CreateArticleCommand>
 {
-  constructor(
-    private readonly entityManager: EntityManager,
-    private readonly eventEmitter: EventEmitter2,
-  ) {}
+  constructor(private readonly entityManager: EntityManager) {}
 
   async execute(command: CreateArticleCommand) {
     const data = schema.parse(command.props);
@@ -35,12 +31,12 @@ export class CreateArticleHandler
       content: data.content,
     });
 
-    this.eventEmitter.emit('article.created', {
+    article.addEvent<ArticleCreatedEvent>('article.created', {
       articleId: article.id,
       userId: article.user.id,
       title: article.title,
       content: article.content,
-    } as ArticleCreatedEvent);
+    });
 
     return {
       id: article.id,

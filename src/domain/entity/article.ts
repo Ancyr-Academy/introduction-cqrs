@@ -8,9 +8,10 @@ import {
 } from '@mikro-orm/core';
 import { User } from './user';
 import { Clap } from './clap';
+import { BaseEntity } from './base-entity';
 
 @Entity()
-export class Article {
+export class Article extends BaseEntity {
   @Property({ primary: true })
   public id: string;
 

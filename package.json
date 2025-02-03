@@ -34,6 +34,7 @@
     "@nestjs/cqrs": "^11.0.0",
     "@nestjs/event-emitter": "^3.0.0",
     "@nestjs/platform-fastify": "^11.0.6",
+    "@nestjs/schedule": "^5.0.1",
     "@redis/json": "^1.0.7",
     "class-transformer": "^0.5.1",
     "redis": "^4.7.0",

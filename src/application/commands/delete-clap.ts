@@ -1,6 +1,5 @@
 import { CommandHandler, ICommand, ICommandHandler } from '@nestjs/cqrs';
 import { EntityManager } from '@mikro-orm/sqlite';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Clap } from '../../domain/entity/clap';
 import { ClapDeletedEvent } from '../../domain/events/clap-events';
 
@@ -10,10 +9,7 @@ export class DeleteClapCommand implements ICommand {
 
 @CommandHandler(DeleteClapCommand)
 export class DeleteClapHandler implements ICommandHandler<DeleteClapCommand> {
-  constructor(
-    private readonly entityManager: EntityManager,
-    private readonly eventEmitter: EventEmitter2,
-  ) {}
+  constructor(private readonly entityManager: EntityManager) {}
 
   async execute(command: DeleteClapCommand) {
     const clap = await this.entityManager.findOneOrFail(
@@ -26,16 +22,12 @@ export class DeleteClapHandler implements ICommandHandler<DeleteClapCommand> {
       },
     );
 
-    const articleId = clap.article.id;
-    const articleUserId = clap.article.unwrap().user.id;
-    const clapsCount = clap.count;
+    clap.addEvent<ClapDeletedEvent>('clap.deleted', {
+      articleId: clap.article.id,
+      articleUserId: clap.article.unwrap().user.id,
+      clapsCount: clap.count,
+    });
 
     this.entityManager.remove(clap);
-
-    this.eventEmitter.emit('clap.deleted', {
-      articleId,
-      articleUserId,
-      clapsCount,
-    } as ClapDeletedEvent);
   }
 }

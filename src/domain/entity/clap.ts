@@ -1,8 +1,9 @@
 import { Entity, ManyToOne, Property, Ref } from '@mikro-orm/core';
 import { Article } from './article';
+import { BaseEntity } from './base-entity';
 
 @Entity()
-export class Clap {
+export class Clap extends BaseEntity {
   @Property({ primary: true })
   public id: string;
 

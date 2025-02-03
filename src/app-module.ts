@@ -22,6 +22,8 @@ import { UpdateArticleHandler } from './application/commands/update-article';
 import { UpdateClapHandler } from './application/commands/update-clap';
 import { UpdateUserHandler } from './application/commands/update-user';
 import { GetUserHandler } from './application/queries/get-user';
+import { TransactionalEventSubscriber } from './infrastructure/transactional-event-subscriber';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -42,6 +44,7 @@ import { GetUserHandler } from './application/queries/get-user';
       wildcard: true,
     }),
     CqrsModule.forRoot(),
+    ScheduleModule.forRoot(),
   ],
   controllers: [
     AppController,
@@ -52,6 +55,7 @@ import { GetUserHandler } from './application/queries/get-user';
   providers: [
     UserProfileProjector,
     AppCommandBus,
+    TransactionalEventSubscriber,
     RedisService,
     CreateArticleHandler,
     CreateClapHandler,
