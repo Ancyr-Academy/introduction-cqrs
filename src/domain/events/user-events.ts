@@ -4,4 +4,6 @@ export type UserCreatedEvent = {
 
 export type UserUpdatedEvent = {
   userId: string;
+  firstName: string;
+  lastName: string;
 };

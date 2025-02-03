@@ -6,7 +6,10 @@ import { User } from '../../domain/entity/user';
 import { UserViewModel } from '../view-models/user-view-model';
 import { UserProfileProjector } from './user-profile-projector';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { UserCreatedEvent } from '../../domain/events/user-events';
+import {
+  UserCreatedEvent,
+  UserUpdatedEvent,
+} from '../../domain/events/user-events';
 
 const userSchema = z.object({
   firstName: z.string(),
@@ -54,7 +57,9 @@ export class UserService {
 
     this.eventEmitter.emit('user.updated', {
       userId: user.id,
-    } as UserCreatedEvent);
+      firstName: user.firstName,
+      lastName: user.lastName,
+    } as UserUpdatedEvent);
   }
 
   async getUser(id: string): Promise<UserViewModel> {

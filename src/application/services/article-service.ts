@@ -43,6 +43,9 @@ export class ArticleService {
 
     this.eventEmitter.emit('article.created', {
       articleId: article.id,
+      userId: article.user.id,
+      title: article.title,
+      content: article.content,
     } as ArticleCreatedEvent);
 
     return {
@@ -64,6 +67,9 @@ export class ArticleService {
 
     this.eventEmitter.emit('article.updated', {
       articleId: article.id,
+      userId: article.user.id,
+      title: article.title,
+      content: article.content,
     } as ArticleUpdatedEvent);
   }
 
@@ -78,6 +84,7 @@ export class ArticleService {
     await this.entityManager.flush();
 
     this.eventEmitter.emit('article.deleted', {
+      articleId: article.id,
       userId,
     } as ArticleDeletedEvent);
   }

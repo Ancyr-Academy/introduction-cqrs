@@ -7,8 +7,6 @@ import {
   ClapDeletedEvent,
   ClapUpdatedEvent,
 } from '../../domain/events/clap-events';
-import { Clap } from '../../domain/entity/clap';
-import { Article } from '../../domain/entity/article';
 import {
   ArticleCreatedEvent,
   ArticleDeletedEvent,
@@ -85,6 +83,20 @@ export class UserProfileProjector {
     await this.redis.setJson(`user.${userId}`, viewModel);
   }
 
+  async partialUpdate(
+    userId: string,
+    apply: (viewModel: UserViewModel) => void,
+  ) {
+    const viewModel = await this.redis.getJson<UserViewModel>(`user.${userId}`);
+    if (!viewModel) {
+      await this.synchronize(userId);
+    }
+
+    apply(viewModel);
+
+    await this.redis.setJson(`user.${userId}`, viewModel);
+  }
+
   @OnEvent('user.created', { async: true })
   async onUserCreated(event: UserCreatedEvent) {
     return this.synchronize(event.userId);
@@ -92,64 +104,85 @@ export class UserProfileProjector {
 
   @OnEvent('user.updated', { async: true })
   async onUserUpdated(event: UserUpdatedEvent) {
-    return this.synchronize(event.userId);
+    return this.partialUpdate(event.userId, (viewModel) => {
+      viewModel.firstName = event.firstName;
+      viewModel.lastName = event.lastName;
+    });
   }
 
   @OnEvent('article.created', { async: true })
   async onArticleCreated(event: ArticleCreatedEvent) {
-    return this.synchronizeFromArticle(event.articleId);
+    return this.partialUpdate(event.userId, (viewModel) => {
+      // Naive implementation, what if two concurrent updates ?
+      viewModel.articles.push({
+        id: event.articleId,
+        title: event.title,
+        content: event.content,
+        clapsCount: 0,
+      });
+    });
   }
 
   @OnEvent('article.updated', { async: true })
   async onArticleUpdated(event: ArticleUpdatedEvent) {
-    return this.synchronizeFromArticle(event.articleId);
+    return this.partialUpdate(event.userId, (viewModel) => {
+      const article = viewModel.articles.find(
+        (article) => article.id === event.articleId,
+      );
+
+      if (article) {
+        article.title = event.title;
+        article.content = event.content;
+      }
+    });
   }
 
   @OnEvent('article.deleted', { async: true })
   async onArticleDeleted(event: ArticleDeletedEvent) {
-    return this.synchronize(event.userId);
+    return this.partialUpdate(event.userId, (viewModel) => {
+      viewModel.articles = viewModel.articles.filter(
+        (article) => article.id !== event.articleId,
+      );
+    });
   }
 
   @OnEvent('clap.created', { async: true })
   async onClapCreated(event: ClapCreatedEvent) {
-    return this.synchronizeFromClap(event.clapId);
+    return this.partialUpdate(event.articleUserId, (viewModel) => {
+      const article = viewModel.articles.find(
+        (article) => article.id === event.articleId,
+      );
+
+      if (article) {
+        article.clapsCount += event.clapsCount;
+      }
+    });
   }
 
   @OnEvent('clap.updated', { async: true })
   async onClapUpdated(event: ClapUpdatedEvent) {
-    return this.synchronizeFromClap(event.clapId);
+    return this.partialUpdate(event.articleUserId, (viewModel) => {
+      const article = viewModel.articles.find(
+        (article) => article.id === event.articleId,
+      );
+
+      if (article) {
+        const addedClaps = event.after - event.before;
+        article.clapsCount += addedClaps;
+      }
+    });
   }
 
   @OnEvent('clap.deleted', { async: true })
   async onClapDeleted(event: ClapDeletedEvent) {
-    return this.synchronizeFromArticle(event.articleId);
-  }
+    return this.partialUpdate(event.articleUserId, (viewModel) => {
+      const article = viewModel.articles.find(
+        (article) => article.id === event.articleId,
+      );
 
-  private async synchronizeFromClap(clapId: string) {
-    const clap = await this.entityManager.findOne(
-      Clap,
-      {
-        id: clapId,
-      },
-      {
-        populate: ['article', 'article.user'],
-      },
-    );
-
-    return this.synchronize(clap.article.unwrap().user.id);
-  }
-
-  private async synchronizeFromArticle(articleId: string) {
-    const article = await this.entityManager.findOne(
-      Article,
-      {
-        id: articleId,
-      },
-      {
-        populate: ['user'],
-      },
-    );
-
-    return this.synchronize(article.user.id);
+      if (article) {
+        article.clapsCount -= event.clapsCount;
+      }
+    });
   }
 }
