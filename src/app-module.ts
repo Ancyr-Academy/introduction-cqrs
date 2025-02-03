@@ -8,7 +8,7 @@ import { UserController } from './application/controllers/user-controller';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ArticleController } from './application/controllers/article-controller';
 import { ClapsController } from './application/controllers/claps-controller';
-import { UserProfileProjector } from './application/services/user-profile-projector';
+import { ProfileProjector } from './application/projections/profile/profile-projector';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { RedisService } from './infrastructure/redis-service';
 import { CqrsModule } from '@nestjs/cqrs';
@@ -24,6 +24,9 @@ import { UpdateUserHandler } from './application/commands/update-user';
 import { GetUserHandler } from './application/queries/get-user';
 import { TransactionalEventSubscriber } from './infrastructure/transactional-event-subscriber';
 import { ScheduleModule } from '@nestjs/schedule';
+import { BullModule } from '@nestjs/bullmq';
+import { ProfileProcessor } from './application/projections/profile/profile-processor';
+import { ProfileDispatcher } from './application/projections/profile/profile-dispatcher';
 
 @Module({
   imports: [
@@ -45,6 +48,14 @@ import { ScheduleModule } from '@nestjs/schedule';
     }),
     CqrsModule.forRoot(),
     ScheduleModule.forRoot(),
+    BullModule.forRoot({
+      connection: {
+        url: 'redis://user:azerty123@localhost:11013',
+      },
+    }),
+    BullModule.registerQueue({
+      name: 'profile-projection',
+    }),
   ],
   controllers: [
     AppController,
@@ -53,7 +64,9 @@ import { ScheduleModule } from '@nestjs/schedule';
     ClapsController,
   ],
   providers: [
-    UserProfileProjector,
+    ProfileProjector,
+    ProfileProcessor,
+    ProfileDispatcher,
     AppCommandBus,
     TransactionalEventSubscriber,
     RedisService,

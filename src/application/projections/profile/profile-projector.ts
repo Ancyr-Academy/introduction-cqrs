@@ -1,25 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from '@mikro-orm/sqlite';
-import { UserViewModel } from '../view-models/user-view-model';
-import { OnEvent } from '@nestjs/event-emitter';
+import { UserViewModel } from '../../view-models/user-view-model';
 import {
   ClapCreatedEvent,
   ClapDeletedEvent,
   ClapUpdatedEvent,
-} from '../../domain/events/clap-events';
+} from '../../../domain/events/clap-events';
 import {
   ArticleCreatedEvent,
   ArticleDeletedEvent,
   ArticleUpdatedEvent,
-} from '../../domain/events/article-events';
+} from '../../../domain/events/article-events';
 import {
   UserCreatedEvent,
   UserUpdatedEvent,
-} from '../../domain/events/user-events';
-import { RedisService } from '../../infrastructure/redis-service';
+} from '../../../domain/events/user-events';
+import { RedisService } from '../../../infrastructure/redis-service';
 
 @Injectable()
-export class UserProfileProjector {
+export class ProfileProjector {
   constructor(
     private readonly entityManager: EntityManager,
     private readonly redis: RedisService,
@@ -97,12 +96,10 @@ export class UserProfileProjector {
     await this.redis.setJson(`user.${userId}`, viewModel);
   }
 
-  @OnEvent('user.created', { async: true })
   async onUserCreated(event: UserCreatedEvent) {
     return this.synchronize(event.userId);
   }
 
-  @OnEvent('user.updated', { async: true })
   async onUserUpdated(event: UserUpdatedEvent) {
     return this.partialUpdate(event.userId, (viewModel) => {
       viewModel.firstName = event.firstName;
@@ -110,7 +107,6 @@ export class UserProfileProjector {
     });
   }
 
-  @OnEvent('article.created', { async: true })
   async onArticleCreated(event: ArticleCreatedEvent) {
     return this.partialUpdate(event.userId, (viewModel) => {
       // Naive implementation, what if two concurrent updates ?
@@ -123,7 +119,6 @@ export class UserProfileProjector {
     });
   }
 
-  @OnEvent('article.updated', { async: true })
   async onArticleUpdated(event: ArticleUpdatedEvent) {
     return this.partialUpdate(event.userId, (viewModel) => {
       const article = viewModel.articles.find(
@@ -137,7 +132,6 @@ export class UserProfileProjector {
     });
   }
 
-  @OnEvent('article.deleted', { async: true })
   async onArticleDeleted(event: ArticleDeletedEvent) {
     return this.partialUpdate(event.userId, (viewModel) => {
       viewModel.articles = viewModel.articles.filter(
@@ -146,7 +140,6 @@ export class UserProfileProjector {
     });
   }
 
-  @OnEvent('clap.created', { async: true })
   async onClapCreated(event: ClapCreatedEvent) {
     return this.partialUpdate(event.articleUserId, (viewModel) => {
       const article = viewModel.articles.find(
@@ -159,7 +152,6 @@ export class UserProfileProjector {
     });
   }
 
-  @OnEvent('clap.updated', { async: true })
   async onClapUpdated(event: ClapUpdatedEvent) {
     return this.partialUpdate(event.articleUserId, (viewModel) => {
       const article = viewModel.articles.find(
@@ -173,7 +165,6 @@ export class UserProfileProjector {
     });
   }
 
-  @OnEvent('clap.deleted', { async: true })
   async onClapDeleted(event: ClapDeletedEvent) {
     return this.partialUpdate(event.articleUserId, (viewModel) => {
       const article = viewModel.articles.find(

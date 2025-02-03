@@ -1,5 +1,5 @@
 import { IQuery, IQueryHandler, QueryHandler } from '@nestjs/cqrs';
-import { UserProfileProjector } from '../services/user-profile-projector';
+import { ProfileProjector } from '../projections/profile/profile-projector';
 import { UserViewModel } from '../view-models/user-view-model';
 
 export class GetUserQuery implements IQuery {
@@ -10,7 +10,7 @@ export class GetUserQuery implements IQuery {
 export class GetUserHandler
   implements IQueryHandler<GetUserQuery, UserViewModel>
 {
-  constructor(private readonly projector: UserProfileProjector) {}
+  constructor(private readonly projector: ProfileProjector) {}
 
   execute(query: GetUserQuery) {
     return this.projector.getProjection(query.id);
